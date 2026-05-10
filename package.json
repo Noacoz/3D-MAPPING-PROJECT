@@ -1,0 +1,18 @@
+{
+  "name": "gta-vi-leonida-globe",
+  "version": "1.0.0",
+  "description": "Static interactive GTA VI Leonida globe using Three.js, ThreeGlobe, and CDN-based dependencies.",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -c-1 . -p 8080",
+    "lint": "eslint assets/js/app.js",
+    "check": "npm run lint"
+  },
+  "keywords": ["threejs","three-globe","gta6","interactive","map","globe"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^10.3.0",
+    "http-server": "^14.1.1"
+  }
+}
