@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GTA VI Mapping Project – Interactive Leonida Globe</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<div id="globeContainer"></div>
+<div id="controlPanel">
+  <h1>GTA VI Mapping Project – Interactive Leonida Globe</h1>
+  <div class="section" id="searchGroup">
+    <div class="section-title">Search locations</div>
+    <input id="searchInput" type="search" placeholder="Find Vice City, Lake Leonida, Starfish Island..." autocomplete="off">
+    <div id="searchSuggestions"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Categories</div>
+    <div class="button-row" id="categoryButtons"></div>
+  </div>
+  <div class="section layer-toggle">
+    <div class="section-title">Layer toggles</div>
+    <label><input id="toggleTrailer" type="checkbox" checked> Official Trailer Locations</label>
+    <label><input id="toggleLeak" type="checkbox" checked> Leaked Footage Locations</label>
+    <label><input id="toggleCommunity" type="checkbox" checked> Community Speculation</label>
+    <label><input id="toggleComparison" type="checkbox"> GTA 5 Comparison Overlay</label>
+  </div>
+  <div class="section">
+    <div class="section-title">Mini map</div>
+    <div id="miniMapContainer"><canvas id="miniMap" width="320" height="140"></canvas></div>
+  </div>
+  <div class="footer-note">
+    Data based on @gtavi_mapping, GTAForums, and community analysis. Not affiliated with Rockstar Games.
+  </div>
+</div>
+<div id="popup" class="hidden" aria-hidden="true"></div>
+<div id="loadingOverlay">Generating Leonida globe and markers…</div>
+<div id="errorBox" class="hidden"></div>
+
+<script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://unpkg.com/three-globe@2.31.0/dist/three-globe.min.js"></script>
+<script src="https://unpkg.com/@tweenjs/tween.js@18.6.4/dist/tween.umd.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
+
