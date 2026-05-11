@@ -229,62 +229,80 @@ function createRealisticEarthTexture() {
 }
 
 function createEarthFallback(width, height) {
-  // Fallback canvas-based Earth if CDN fails
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  
-  // Create a realistic gradient background (oceans)
+
   const oceanGradient = ctx.createLinearGradient(0, 0, 0, height);
-  oceanGradient.addColorStop(0, '#1a4d7a');
-  oceanGradient.addColorStop(0.5, '#0f3f5c');
-  oceanGradient.addColorStop(1, '#162b47');
+  oceanGradient.addColorStop(0, '#132840');
+  oceanGradient.addColorStop(0.45, '#0d2b4a');
+  oceanGradient.addColorStop(1, '#0a1a2c');
   ctx.fillStyle = oceanGradient;
   ctx.fillRect(0, 0, width, height);
-  
-  // Add realistic landmasses with texture
-  ctx.fillStyle = '#2d5a3d';
+
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = '#364e37';
   ctx.beginPath();
-  // Simplified Florida-like shape with more detail
-  ctx.moveTo(width * 0.45, height * 0.25);
-  ctx.bezierCurveTo(width * 0.42, height * 0.20, width * 0.40, height * 0.12, width * 0.52, height * 0.10);
-  ctx.bezierCurveTo(width * 0.65, height * 0.08, width * 0.70, height * 0.14, width * 0.68, height * 0.22);
-  ctx.bezierCurveTo(width * 0.65, height * 0.32, width * 0.62, height * 0.40, width * 0.58, height * 0.45);
-  ctx.bezierCurveTo(width * 0.54, height * 0.52, width * 0.50, height * 0.58, width * 0.46, height * 0.62);
-  ctx.bezierCurveTo(width * 0.42, height * 0.58, width * 0.40, height * 0.48, width * 0.43, height * 0.35);
+  ctx.moveTo(width * 0.40, height * 0.24);
+  ctx.bezierCurveTo(width * 0.37, height * 0.18, width * 0.37, height * 0.10, width * 0.51, height * 0.085);
+  ctx.bezierCurveTo(width * 0.62, height * 0.075, width * 0.72, height * 0.12, width * 0.69, height * 0.19);
+  ctx.bezierCurveTo(width * 0.66, height * 0.26, width * 0.62, height * 0.35, width * 0.57, height * 0.43);
+  ctx.bezierCurveTo(width * 0.53, height * 0.51, width * 0.49, height * 0.57, width * 0.45, height * 0.62);
+  ctx.bezierCurveTo(width * 0.42, height * 0.60, width * 0.40, height * 0.50, width * 0.43, height * 0.38);
   ctx.closePath();
   ctx.fill();
-  
-  // Add forest texture
-  for (let i = 0; i < 200; i++) {
-    const x = width * (0.40 + Math.random() * 0.30);
-    const y = height * (0.10 + Math.random() * 0.55);
-    if (Math.random() > 0.7) {
-      ctx.fillStyle = `rgba(45, 90, 61, ${0.3 + Math.random() * 0.4})`;
-      ctx.fillRect(x, y, 3 + Math.random() * 4, 3 + Math.random() * 4);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#99b477';
+  for (let i = 0; i < 220; i++) {
+    const x = width * (0.41 + Math.random() * 0.24);
+    const y = height * (0.12 + Math.random() * 0.45);
+    if (Math.random() > 0.74) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5 + Math.random() * 2.5, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
-  
-  // Add city lights
-  ctx.fillStyle = 'rgba(255, 200, 0, 0.6)';
-  [[0.52, 0.30], [0.50, 0.32], [0.54, 0.28], [0.56, 0.35], [0.48, 0.38]].forEach(([nx, ny]) => {
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(237, 243, 255, 0.18)';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(width * 0.46, height * 0.22);
+  ctx.bezierCurveTo(width * 0.52, height * 0.20, width * 0.57, height * 0.22, width * 0.63, height * 0.23);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(width * 0.49, height * 0.34);
+  ctx.bezierCurveTo(width * 0.55, height * 0.33, width * 0.60, height * 0.37, width * 0.65, height * 0.39);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(255, 235, 130, 0.65)';
+  [[0.52, 0.32], [0.50, 0.34], [0.54, 0.29], [0.57, 0.36], [0.48, 0.39]].forEach(([nx, ny]) => {
     ctx.beginPath();
-    ctx.arc(width * nx, height * ny, 2 + Math.random() * 3, 0, Math.PI * 2);
+    ctx.arc(width * nx, height * ny, 2 + Math.random() * 4, 0, Math.PI * 2);
     ctx.fill();
   });
-  
-  // Add clouds
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-  for (let i = 0; i < 8; i++) {
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+  for (let i = 0; i < 12; i++) {
     const x = Math.random() * width;
-    const y = Math.random() * height;
-    const size = 15 + Math.random() * 25;
+    const y = Math.random() * height * 0.8;
+    const size = 22 + Math.random() * 32;
     ctx.beginPath();
-    ctx.ellipse(x, y, size, size * 0.6, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(x, y, size, size * 0.5, Math.random() * Math.PI, 0, Math.PI * 2);
     ctx.fill();
   }
-  
+
+  ctx.globalCompositeOperation = 'screen';
+  const glow = ctx.createRadialGradient(width * 0.52, height * 0.33, 0, width * 0.52, height * 0.33, width * 0.08);
+  glow.addColorStop(0, 'rgba(255, 240, 200, 0.16)');
+  glow.addColorStop(1, 'rgba(255, 240, 200, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = 'source-over';
+
   return canvas.toDataURL();
 }
 
@@ -730,85 +748,84 @@ function createBuildings() {
   if (buildingsMesh) {
     scene.remove(buildingsMesh);
   }
-  
+
   const group = new THREE.Group();
   const filteredLocations = mapLocations.locations.filter(loc => shouldIncludeLocation(loc));
-  
-  // Height multipliers by category
+
   const heightMultiplier = {
-    city: 3.2,
-    town: 2.0,
-    landmark: 2.5,
-    natural: 0.8,
-    industrial: 2.8,
-    recreational: 1.5,
-    transport: 2.2,
+    city: 4.8,
+    town: 3.2,
+    landmark: 4.2,
+    natural: 1.2,
+    industrial: 3.6,
+    recreational: 2.8,
+    transport: 3.0,
     water: 0.0
   };
-  
+
   filteredLocations.slice(0, 40).forEach(loc => {
     if (!loc.lat || !loc.lng) return;
-    const pos = sphericalToCartesian(loc.lat, loc.lng, 100.8);
-    
-    // Create building
-    const height = (heightMultiplier[loc.category] || 1.5) + Math.random() * 0.8;
-    const width = 0.8 + Math.random() * 0.4;
-    const depth = 0.8 + Math.random() * 0.4;
-    
+    const pos = sphericalToCartesian(loc.lat, loc.lng, 100.2);
+    const height = (heightMultiplier[loc.category] || 2.5) + Math.random() * 1.8;
+    const width = 1.2 + Math.random() * 1.4;
+    const depth = 1.2 + Math.random() * 1.4;
+
     const geometry = new THREE.BoxGeometry(width, height, depth);
+    geometry.translate(0, height / 2, 0);
+
     const color = new THREE.Color(colorMap[loc.category] || '#9bbcff');
     const material = new THREE.MeshPhongMaterial({
-      color: color,
-      emissive: new THREE.Color(color).multiplyScalar(0.3),
-      shininess: 80,
-      wireframe: false
+      color: color.lerp(new THREE.Color('#ffffff'), 0.18),
+      emissive: new THREE.Color(color).multiplyScalar(0.26),
+      emissiveIntensity: 0.25,
+      shininess: 60
     });
-    
+
     const building = new THREE.Mesh(geometry, material);
     building.position.copy(pos);
-    building.position.normalize().multiplyScalar(100.8);
     building.lookAt(new THREE.Vector3(0, 0, 0));
-    building.rotateZ(Math.random() * Math.PI);
+    building.rotateOnWorldAxis(pos.clone().normalize(), Math.random() * Math.PI * 2);
     building.userData = { location: loc };
-    
+
+    if (height > 4) {
+      const cap = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.8, 0.2, depth * 0.8),
+        new THREE.MeshPhongMaterial({ color: '#ffffff', emissive: 0x8696ff, emissiveIntensity: 0.28, transparent: true, opacity: 0.85 })
+      );
+      cap.position.set(0, height - 0.1, 0);
+      building.add(cap);
+    }
+
     group.add(building);
   });
-  
+
   scene.add(group);
   buildingsMesh = group;
 }
 
 function initGlobe() {
   globeContainer.appendChild(renderer.domElement);
-  
-  // Create a basic Earth sphere using Three.js if three-globe isn't working
-  let earthSphere = null;
-  try {
-    // Try to use three-globe
-    earthSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(100, 128, 128),
-      new THREE.MeshPhongMaterial({
-        map: new THREE.CanvasTexture(createImageFromDataUrl(createGlobeTexture())),
-        emissive: 0x0a0d12,
-        emissiveIntensity: 0.2,
-        shininess: 80
-      })
-    );
-  } catch (e) {
-    // Fallback to simple sphere
-    earthSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(100, 64, 64),
-      new THREE.MeshPhongMaterial({
-        color: 0x3d7a2d,
-        emissive: 0x0a0d12,
-        emissiveIntensity: 0.2
-      })
-    );
-  }
-  
-  scene.add(earthSphere);
+  scene.add(globe);
   scene.add(createAtmosphere());
   scene.add(createStarfield());
+
+  globe.globeImageUrl(createGlobeTexture());
+  if (typeof globe.globeBumpImageUrl === 'function') {
+    globe.globeBumpImageUrl(createBumpTexture());
+  }
+  globe.globeMaterial(new THREE.MeshPhongMaterial({
+    specular: 0x999999,
+    shininess: 14,
+    emissive: 0x0c1422,
+    emissiveIntensity: 0.18,
+    color: 0xffffff
+  }));
+  if (typeof globe.atmosphereColor === 'function') {
+    globe.atmosphereColor('rgba(135,206,255,0.18)');
+  }
+  if (typeof globe.atmosphereAltitude === 'function') {
+    globe.atmosphereAltitude(0.045);
+  }
 
   buildCategoryButtons();
   createBuildings();
