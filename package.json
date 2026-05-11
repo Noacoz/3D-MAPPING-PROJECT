@@ -8,11 +8,18 @@
     "lint": "eslint assets/js/app.js",
     "check": "npm run lint"
   },
-  "keywords": ["threejs","three-globe","gta6","interactive","map","globe"],
+  "keywords": [
+    "threejs",
+    "three-globe",
+    "gta6",
+    "interactive",
+    "map",
+    "globe"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "eslint": "^10.3.0",
+    "eslint": "^8.57.0",
     "http-server": "^14.1.1"
   }
 }

@@ -113,7 +113,7 @@ camera.position.set(0, 220, 700);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setClearColor(0x05060f, 1);
 globeContainer.appendChild(renderer.domElement);
 
@@ -126,17 +126,77 @@ const fillLight = new THREE.DirectionalLight(0x80b4ff, 0.25);
 fillLight.position.set(-120, 80, -220);
 scene.add(fillLight);
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 300;
-controls.maxDistance = 2000;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.5;
-controls.enableZoom = true;
-controls.minPolarAngle = 0.22;
-controls.maxPolarAngle = Math.PI - 0.7;
-controls.target.set(0, 0, 0);
+// Lightweight camera controller (OrbitControls replacement)
+const controls = {
+  target: new THREE.Vector3(0, 0, 0),
+  enableDamping: true,
+  dampingFactor: 0.08,
+  minDistance: 300,
+  maxDistance: 2000,
+  autoRotate: true,
+  autoRotateSpeed: 0.5,
+  enableZoom: true,
+  minPolarAngle: 0.22,
+  maxPolarAngle: Math.PI - 0.7,
+  
+  // Internal state
+  _euler: new THREE.Euler(0, 0, 0, 'YXZ'),
+  _vector: new THREE.Vector3(),
+  _spherical: { radius: 700, phi: 0.3, theta: 0 },
+  _velocity: { x: 0, y: 0 },
+  _isDragging: false,
+  _previousPointer: { x: 0, y: 0 },
+  
+  update: function() {
+    if (this.autoRotate && !this._isDragging) {
+      this._spherical.theta += this.autoRotateSpeed * 0.0005;
+    }
+    if (this.enableDamping) {
+      this._velocity.x *= (1 - this.dampingFactor);
+      this._velocity.y *= (1 - this.dampingFactor);
+      this._spherical.theta += this._velocity.x;
+      this._spherical.phi += this._velocity.y;
+    }
+    this._spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius));
+    this._spherical.phi = Math.max(this.minPolarAngle, Math.min(this.maxPolarAngle, this._spherical.phi));
+    
+    this._vector.setFromSpherical({ radius: this._spherical.radius, phi: this._spherical.phi, theta: this._spherical.theta });
+    this._vector.add(this.target);
+    camera.position.lerp(this._vector, 0.1);
+    camera.lookAt(this.target);
+  },
+  
+  handleMouseDown: function(e) {
+    if (e.button !== 0 || e.target.closest('#controlPanel') || e.target.closest('#popup')) return;
+    this._isDragging = true;
+    this._previousPointer = { x: e.clientX, y: e.clientY };
+  },
+  
+  handleMouseMove: function(e) {
+    if (!this._isDragging) return;
+    const delta = {
+      x: e.clientX - this._previousPointer.x,
+      y: e.clientY - this._previousPointer.y
+    };
+    this._spherical.theta -= delta.x * 0.005;
+    this._spherical.phi -= delta.y * 0.005;
+    if (this.enableDamping) {
+      this._velocity.x = -delta.x * 0.005;
+      this._velocity.y = -delta.y * 0.005;
+    }
+    this._previousPointer = { x: e.clientX, y: e.clientY };
+  },
+  
+  handleMouseUp: function() {
+    this._isDragging = false;
+  },
+  
+  handleWheel: function(e) {
+    if (e.target.closest('#controlPanel')) return;
+    e.preventDefault();
+    this._spherical.radius += e.deltaY > 0 ? 30 : -30;
+  }
+};
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -407,17 +467,16 @@ function updateGlobeData(force = false) {
   currentVisibleLocations = getFilteredLocations(distance);
   const hover = hoveredLocation;
   const scale = THREE.MathUtils.clamp(1.6 - (distance - 300) / 900, 0.55, 1.4);
-  globe.pointsData(currentVisibleLocations)
-    .pointLat(d => d.lat)
-    .pointLng(d => d.lng)
-    .pointColor(d => hover === d ? "#fff4b0" : colorMap[d.category] || "#9bbcff")
-    .pointAltitude(d => 0.01 + 0.008 * (1 - THREE.MathUtils.clamp((distance - 300) / 1200, 0, 1)))
-    .pointRadius(d => hover === d ? Math.min(1.4 * scale, 1.6) : 0.72 * scale)
-    .pointsMerge(true)
-    .pointLabel(d => d.name);
+  
+  globe.pointsData(currentVisibleLocations);
+  globe.pointLat(d => d.lat);
+  globe.pointLng(d => d.lng);
+  globe.pointColor(d => hover === d ? "#fff4b0" : colorMap[d.category] || "#9bbcff");
+  globe.pointAltitude(() => 0.01 + 0.008 * (1 - THREE.MathUtils.clamp((distance - 300) / 1200, 0, 1)));
+  globe.pointRadius(d => hover === d ? Math.min(1.4 * scale, 1.6) : 0.72 * scale);
+  if (typeof globe.pointsMerge === 'function') globe.pointsMerge(true);
+  if (typeof globe.pointLabel === 'function') globe.pointLabel(d => d.name);
 }
-
-function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 
 function updatePopupPosition() {
   if (!popup || popup.classList.contains('hidden') || !popup.dataset.lat) return;
@@ -601,17 +660,23 @@ function initGlobe() {
   scene.add(createAtmosphere());
   scene.add(createStarfield());
 
-  globe.globeImageUrl(createGlobeTexture())
-    .globeBumpImageUrl(createBumpTexture())
-    .globeMaterial(new THREE.MeshPhongMaterial({
-      specular: 0x999999,
-      shininess: 10,
-      emissive: 0x0a0d12,
-      emissiveIntensity: 0.25,
-      color: 0xffffff
-    }))
-    .atmosphereColor("rgba(135,206,255,0.16)")
-    .atmosphereAltitude(0.04);
+  globe.globeImageUrl(createGlobeTexture());
+  if (typeof globe.globeBumpImageUrl === 'function') {
+    globe.globeBumpImageUrl(createBumpTexture());
+  }
+  globe.globeMaterial(new THREE.MeshPhongMaterial({
+    specular: 0x999999,
+    shininess: 10,
+    emissive: 0x0a0d12,
+    emissiveIntensity: 0.25,
+    color: 0xffffff
+  }));
+  if (typeof globe.atmosphereColor === 'function') {
+    globe.atmosphereColor("rgba(135,206,255,0.16)");
+  }
+  if (typeof globe.atmosphereAltitude === 'function') {
+    globe.atmosphereAltitude(0.04);
+  }
 
   buildCategoryButtons();
   updateGlobeData(true);
@@ -637,6 +702,10 @@ function initGlobe() {
 
   renderer.domElement.addEventListener('pointermove', handlePointerMove);
   renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+  renderer.domElement.addEventListener('mousedown', (e) => controls.handleMouseDown(e));
+  renderer.domElement.addEventListener('mousemove', (e) => controls.handleMouseMove(e));
+  renderer.domElement.addEventListener('mouseup', () => controls.handleMouseUp());
+  renderer.domElement.addEventListener('wheel', (e) => controls.handleWheel(e), { passive: false });
   window.addEventListener('resize', onWindowResize);
   animate();
 }
