@@ -222,6 +222,72 @@ function makeCanvasTexture(width, height, drawCallback) {
   return canvas.toDataURL();
 }
 
+function createRealisticEarthTexture() {
+  // Use a realistic Earth texture - return a URL to a CDN-hosted satellite image
+  // This is a free equirectangular Earth map
+  return 'https://www.solarsystemscope.com/textures/download/8k_earth_daymap.jpg';
+}
+
+function createEarthFallback(width, height) {
+  // Fallback canvas-based Earth if CDN fails
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  
+  // Create a realistic gradient background (oceans)
+  const oceanGradient = ctx.createLinearGradient(0, 0, 0, height);
+  oceanGradient.addColorStop(0, '#1a4d7a');
+  oceanGradient.addColorStop(0.5, '#0f3f5c');
+  oceanGradient.addColorStop(1, '#162b47');
+  ctx.fillStyle = oceanGradient;
+  ctx.fillRect(0, 0, width, height);
+  
+  // Add realistic landmasses with texture
+  ctx.fillStyle = '#2d5a3d';
+  ctx.beginPath();
+  // Simplified Florida-like shape with more detail
+  ctx.moveTo(width * 0.45, height * 0.25);
+  ctx.bezierCurveTo(width * 0.42, height * 0.20, width * 0.40, height * 0.12, width * 0.52, height * 0.10);
+  ctx.bezierCurveTo(width * 0.65, height * 0.08, width * 0.70, height * 0.14, width * 0.68, height * 0.22);
+  ctx.bezierCurveTo(width * 0.65, height * 0.32, width * 0.62, height * 0.40, width * 0.58, height * 0.45);
+  ctx.bezierCurveTo(width * 0.54, height * 0.52, width * 0.50, height * 0.58, width * 0.46, height * 0.62);
+  ctx.bezierCurveTo(width * 0.42, height * 0.58, width * 0.40, height * 0.48, width * 0.43, height * 0.35);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Add forest texture
+  for (let i = 0; i < 200; i++) {
+    const x = width * (0.40 + Math.random() * 0.30);
+    const y = height * (0.10 + Math.random() * 0.55);
+    if (Math.random() > 0.7) {
+      ctx.fillStyle = `rgba(45, 90, 61, ${0.3 + Math.random() * 0.4})`;
+      ctx.fillRect(x, y, 3 + Math.random() * 4, 3 + Math.random() * 4);
+    }
+  }
+  
+  // Add city lights
+  ctx.fillStyle = 'rgba(255, 200, 0, 0.6)';
+  [[0.52, 0.30], [0.50, 0.32], [0.54, 0.28], [0.56, 0.35], [0.48, 0.38]].forEach(([nx, ny]) => {
+    ctx.beginPath();
+    ctx.arc(width * nx, height * ny, 2 + Math.random() * 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  
+  // Add clouds
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+  for (let i = 0; i < 8; i++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const size = 15 + Math.random() * 25;
+    ctx.beginPath();
+    ctx.ellipse(x, y, size, size * 0.6, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  return canvas.toDataURL();
+}
+
 function createMapShape(ctx) {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
@@ -336,7 +402,8 @@ function drawMap(ctx, isHeight) {
 }
 
 function createGlobeTexture() {
-  return makeCanvasTexture(2048, 1024, (ctx) => drawMap(ctx, false));
+  // Use canvas-generated realistic Earth texture
+  return createEarthFallback(2048, 1024);
 }
 
 function createBumpTexture() {
@@ -408,6 +475,7 @@ function buildCategoryButtons() {
   allBtn.addEventListener('click', () => {
     activeCategories = new Set(allCategories);
     updateCategoryButtons();
+    createBuildings();
     updateGlobeData(true);
   });
   container.appendChild(allBtn);
@@ -422,6 +490,7 @@ function buildCategoryButtons() {
       else activeCategories.add(cat.id);
       document.querySelector('[data-category="all"]').classList.toggle('active', activeCategories.size === allCategories.length);
       button.classList.toggle('active', activeCategories.has(cat.id));
+      createBuildings();
       updateGlobeData(true);
     });
     container.appendChild(button);
@@ -654,38 +723,102 @@ function handlePointerDown(event) {
   }
 }
 
+// Create and manage 3D buildings at locations
+let buildingsMesh = null;
+
+function createBuildings() {
+  if (buildingsMesh) {
+    scene.remove(buildingsMesh);
+  }
+  
+  const group = new THREE.Group();
+  const filteredLocations = mapLocations.locations.filter(loc => shouldIncludeLocation(loc));
+  
+  // Height multipliers by category
+  const heightMultiplier = {
+    city: 3.2,
+    town: 2.0,
+    landmark: 2.5,
+    natural: 0.8,
+    industrial: 2.8,
+    recreational: 1.5,
+    transport: 2.2,
+    water: 0.0
+  };
+  
+  filteredLocations.slice(0, 40).forEach(loc => {
+    if (!loc.lat || !loc.lng) return;
+    const pos = sphericalToCartesian(loc.lat, loc.lng, 100.8);
+    
+    // Create building
+    const height = (heightMultiplier[loc.category] || 1.5) + Math.random() * 0.8;
+    const width = 0.8 + Math.random() * 0.4;
+    const depth = 0.8 + Math.random() * 0.4;
+    
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+    const color = new THREE.Color(colorMap[loc.category] || '#9bbcff');
+    const material = new THREE.MeshPhongMaterial({
+      color: color,
+      emissive: new THREE.Color(color).multiplyScalar(0.3),
+      shininess: 80,
+      wireframe: false
+    });
+    
+    const building = new THREE.Mesh(geometry, material);
+    building.position.copy(pos);
+    building.position.normalize().multiplyScalar(100.8);
+    building.lookAt(new THREE.Vector3(0, 0, 0));
+    building.rotateZ(Math.random() * Math.PI);
+    building.userData = { location: loc };
+    
+    group.add(building);
+  });
+  
+  scene.add(group);
+  buildingsMesh = group;
+}
+
 function initGlobe() {
   globeContainer.appendChild(renderer.domElement);
-  scene.add(globe);
+  
+  // Create a basic Earth sphere using Three.js if three-globe isn't working
+  let earthSphere = null;
+  try {
+    // Try to use three-globe
+    earthSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(100, 128, 128),
+      new THREE.MeshPhongMaterial({
+        map: new THREE.CanvasTexture(createImageFromDataUrl(createGlobeTexture())),
+        emissive: 0x0a0d12,
+        emissiveIntensity: 0.2,
+        shininess: 80
+      })
+    );
+  } catch (e) {
+    // Fallback to simple sphere
+    earthSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(100, 64, 64),
+      new THREE.MeshPhongMaterial({
+        color: 0x3d7a2d,
+        emissive: 0x0a0d12,
+        emissiveIntensity: 0.2
+      })
+    );
+  }
+  
+  scene.add(earthSphere);
   scene.add(createAtmosphere());
   scene.add(createStarfield());
 
-  globe.globeImageUrl(createGlobeTexture());
-  if (typeof globe.globeBumpImageUrl === 'function') {
-    globe.globeBumpImageUrl(createBumpTexture());
-  }
-  globe.globeMaterial(new THREE.MeshPhongMaterial({
-    specular: 0x999999,
-    shininess: 10,
-    emissive: 0x0a0d12,
-    emissiveIntensity: 0.25,
-    color: 0xffffff
-  }));
-  if (typeof globe.atmosphereColor === 'function') {
-    globe.atmosphereColor("rgba(135,206,255,0.16)");
-  }
-  if (typeof globe.atmosphereAltitude === 'function') {
-    globe.atmosphereAltitude(0.04);
-  }
-
   buildCategoryButtons();
+  createBuildings();
   updateGlobeData(true);
   updateMiniMap();
   loadingOverlay.classList.add('hidden');
 
-  toggleTrailer.addEventListener('change', () => { activeSources.trailer = toggleTrailer.checked; updateGlobeData(true); });
-  toggleLeak.addEventListener('change', () => { activeSources.leak = toggleLeak.checked; updateGlobeData(true); });
-  toggleCommunity.addEventListener('change', () => { activeSources.community = toggleCommunity.checked; updateGlobeData(true); });
+  toggleTrailer.addEventListener('change', () => { activeSources.trailer = toggleTrailer.checked; createBuildings(); updateGlobeData(true); });
+  toggleLeak.addEventListener('change', () => { activeSources.leak = toggleLeak.checked; createBuildings(); updateGlobeData(true); });
+  toggleCommunity.addEventListener('change', () => { activeSources.community = toggleCommunity.checked; createBuildings(); updateGlobeData(true); });
   toggleComparison.addEventListener('change', () => { showComparison = toggleComparison.checked; updateGlobeData(true); });
 
   searchInput.addEventListener('input', debounce(() => { updateSuggestions(); }, 120));
